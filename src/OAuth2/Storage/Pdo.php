@@ -431,7 +431,7 @@ class Pdo implements
      */
     protected function checkPassword($user, $password)
     {
-        return $this->hashPassword($user['password']) == $this->hashPassword($password);
+        return password_verify($user['password'], $this->hashPassword($password));
     }
 
     /**
@@ -472,19 +472,136 @@ class Pdo implements
      * @param string $lastName
      * @return bool
      */
-    public function setUser($username, $password, $firstName = null, $lastName = null)
+//    public function setUser($username, $password, $firstName = null, $lastName = null)
+//    {
+//        // do not store in plaintext
+//        $password = $this->hashPassword($password);
+//
+//        // if it exists, update it.
+//        if ($this->getUser($username)) {
+//            $stmt = $this->db->prepare($sql = sprintf('UPDATE %s SET password=:password, first_name=:firstName, last_name=:lastName where username=:username', $this->config['user_table']));
+//        } else {
+//            $stmt = $this->db->prepare(sprintf('INSERT INTO %s (username, password, first_name, last_name) VALUES (:username, :password, :firstName, :lastName)', $this->config['user_table']));
+//        }
+//
+//        return $stmt->execute(compact('username', 'password', 'firstName', 'lastName'));
+//    }
+    
+    /**
+     * Returns complete set on users in user table
+     * @return bool TRUE if query is successful, FALSE otherwise
+     */
+    public function getUserList()
     {
-        // do not store in plaintext
-        $password = $this->hashPassword($password);
-
-        // if it exists, update it.
-        if ($this->getUser($username)) {
-            $stmt = $this->db->prepare($sql = sprintf('UPDATE %s SET password=:password, first_name=:firstName, last_name=:lastName where username=:username', $this->config['user_table']));
-        } else {
-            $stmt = $this->db->prepare(sprintf('INSERT INTO %s (username, password, first_name, last_name) VALUES (:username, :password, :firstName, :lastName)', $this->config['user_table']));
+        $stmt = $this->db->prepare(sprintf('SELECT * FROM %s ', $this->config['user_table']));
+        return $stmt->execute();
+    }
+    
+    /**
+     * Insert into user table a new user
+     * @param string $username
+     * @param string $password
+     * @param string|null $firstName
+     * @param string|null $lastName
+     * @return bool TRUE if query is successful, FALSE otherwise
+     */
+    public function insertUser($username, $password, $email, $firstName = null, $lastName = null)
+    {
+        if(!isset($username)){
+            throw new InvalidArgumentException("Username is not set");
         }
+        
+        if(!isset($password)){
+            throw new InvalidArgumentException("Password is not set");
+        }
+        
+        if(!isset($email)){
+            throw new InvalidArgumentException("Email is not set");
+        }
+        
+        $insertColumns      = array('username', 'password', 'first_name', 'last_name', 'email', 'email_verified');
+        $insertValues       = array(':username', ':password', ':first_name', ':last_name', ':email', ':email_verified');
+        $insertQuery        = sprintf('INSERT INTO %s ('. implode(",", $insertColumns).') VALUES ('. implode(",", $insertValues) .')', $this->config['user_table']);
+        $isEmailVerified    = 0;
 
-        return $stmt->execute(compact('username', 'password', 'firstName', 'lastName'));
+        $stmt = $this->db->prepare($insertQuery);
+        
+        $stmt->bindParam(':username',       $username);
+        $stmt->bindParam(':password',       $this->hashPassword($password));
+        $stmt->bindParam(':first_name',     $firstName);
+        $stmt->bindParam(':last_name',      $lastName);
+        $stmt->bindParam(':email',          $email);
+        $stmt->bindParam(':email_verified', $isEmailVerified);
+        
+        return $stmt->execute();
+    }
+    
+    /**
+     * Updates a user record in user table
+     * 
+     * @param string $username
+     * @param string|null $password
+     * @param string|null $firstName
+     * @param string|null $lastName
+     * @param string|null $email 
+     * @throws \InvalidArgumentException when username is not set
+     * @return type
+     */
+    public function updateUser($username, $password = null, $firstName = null, $lastName = null, $email = null)
+    {
+        if(!isset($username)){
+            throw new InvalidArgumentException("Username is not set");
+        }
+        
+        $updateValues = array();
+        
+        if(isset($password))
+            array_push($updateValues, 'password=:password');
+        
+        if(isset($email)){
+            array_push($updateValues, 'email=:email');
+            array_push($updateValues, 'email_verified=:email_verified');
+        }
+        
+        if(isset($firstName))
+            array_push($updateValues, 'first_name=:first_name');
+        
+        if(isset($lastName))
+            array_push($updateValues, 'last_name=:last_name');
+        
+        if(!isset($password) && !isset($email) && !isset($firstName) && !isset($lastName))
+            return false;
+        
+        $stmt = $this->db->prepare(sprintf('UPDATE %s SET '. implode(",",$updateValues) .' WHERE username=:username', $this->config['user_table']));
+        
+        isset($password)    ? $stmt->bindParam(':password', $this->hashPassword($password)) : "";
+        isset($firstName)   ? $stmt->bindParam(':first_name', $firstName)                   : "";
+        isset($lastName)    ? $stmt->bindParam(':last_name', $lastName)                     : "";
+        isset($email)       ? $stmt->bindParam(':email', $email)                            : "";
+        isset($email)       ? $stmt->bindParam(':email_verified', 0)                        : "";
+        
+        $stmt->bindParam(':username', $username);
+        
+        return $stmt->execute();
+    }
+    
+    /**
+     * Deletes a user record on table
+     *  
+     * @param string $username
+     * @throws \InvalidArgumentException when username is not set
+     */
+    public function deleteUser($username)
+    {
+        if(!isset($username)){
+            throw new InvalidArgumentException("Username is not set");
+        }
+        
+        $stmt = $this->db->prepare(sprintf('DELETE FROM %s WHERE username=:username', $this->config['user_table']));
+        
+        $stmt->bindParam(':username', $username);
+        
+        return $stmt->execute();
     }
 
     /**
