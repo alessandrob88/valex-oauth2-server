@@ -88,6 +88,7 @@ class Pdo implements
      * @param string $client_id
      * @param null|string $client_secret
      * @return bool
+     * //TODO determine how client secret is secreted
      */
     public function checkClientCredentials($client_id, $client_secret = null)
     {
@@ -489,12 +490,18 @@ class Pdo implements
     
     /**
      * Returns complete set on users in user table
-     * @return bool TRUE if query is successful, FALSE otherwise
+     * @return mixed array of users, FALSE on failure
      */
     public function getUserList()
     {
         $stmt = $this->db->prepare(sprintf('SELECT * FROM %s ', $this->config['user_table']));
-        return $stmt->execute();
+        
+        $stmt->execute();
+        
+        if (!$result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return false;
+        }
+        return $result;
     }
     
     /**
@@ -541,13 +548,14 @@ class Pdo implements
      * 
      * @param string $username
      * @param string|null $password
+     * @param string|null $email 
      * @param string|null $firstName
      * @param string|null $lastName
-     * @param string|null $email 
+     *
      * @throws \InvalidArgumentException when username is not set
      * @return type
      */
-    public function updateUser($username, $password = null, $firstName = null, $lastName = null, $email = null)
+    public function updateUser($username, $password = null, $email = null, $firstName = null, $lastName = null)
     {
         if(!isset($username)){
             throw new InvalidArgumentException("Username is not set");
@@ -569,9 +577,10 @@ class Pdo implements
         if(isset($lastName))
             array_push($updateValues, 'last_name=:last_name');
         
-        if(!isset($password) && !isset($email) && !isset($firstName) && !isset($lastName))
-            return false;
-        
+        if(!isset($password) && !isset($email) && !isset($firstName) && !isset($lastName)){
+            throw new InvalidArgumentException("Any parameter is set");
+        }
+            
         $stmt = $this->db->prepare(sprintf('UPDATE %s SET '. implode(",",$updateValues) .' WHERE username=:username', $this->config['user_table']));
         
         isset($password)    ? $stmt->bindParam(':password', $this->hashPassword($password)) : "";
