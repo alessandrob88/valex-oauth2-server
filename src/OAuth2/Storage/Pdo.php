@@ -498,7 +498,7 @@ class Pdo implements
         
         $stmt->execute();
         
-        if (!$result = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+        if (!$result = $stmt->fetchAll(\PDO::FETCH_ASSOC)) {
             return false;
         }
         return $result;
