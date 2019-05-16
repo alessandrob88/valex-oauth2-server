@@ -431,13 +431,17 @@ class Pdo implements
      */
     protected function checkPassword($user, $password)
     {
-        return $user['password'] == $this->hashPassword($password);
+        return $this->hashPassword($user['password']) == $this->hashPassword($password);
     }
 
-    // use a secure hashing algorithm when storing passwords. Override this for your application
+    /**
+     * use a secure hashing algorithm when storing passwords. Override this for your application
+     * @param string $password
+     * @return string
+     */
     protected function hashPassword($password)
-    {
-        return sha1($password);
+    {        
+        return password_hash($password, PASSWORD_BCRYPT, array("cost" => 12));
     }
 
     /**
