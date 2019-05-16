@@ -431,7 +431,7 @@ class Pdo implements
      */
     protected function checkPassword($user, $password)
     {
-        return password_verify($user['password'], $this->hashPassword($password));
+        return password_verify($password, $user['password']);
     }
 
     /**
