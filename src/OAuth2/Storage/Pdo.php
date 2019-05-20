@@ -446,22 +446,20 @@ class Pdo implements
     }
 
     /**
-     * @param string $username
-     * @return array|bool
+     * @param string $userId
+     * @return array if the user is found
+     *         bool false otherwise
      */
-    public function getUser($username)
+    public function getUser($userId)
     {
-        $stmt = $this->db->prepare($sql = sprintf('SELECT * from %s where username=:username', $this->config['user_table']));
-        $stmt->execute(array('username' => $username));
+        $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s WHERE id=:id', $this->config['user_table']));
+        $stmt->execute(array('id' => $userId));
 
         if (!$userInfo = $stmt->fetch(\PDO::FETCH_ASSOC)) {
             return false;
         }
 
-        // the default behavior is to use "username" as the user_id
-        return array_merge(array(
-            'user_id' => $username
-        ), $userInfo);
+        return $userInfo;
     }
 
     /**
@@ -494,7 +492,7 @@ class Pdo implements
      */
     public function getUserList()
     {
-        $stmt = $this->db->prepare(sprintf('SELECT * FROM %s ', $this->config['user_table']));
+        $stmt = $this->db->prepare(sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s ', $this->config['user_table']));
         
         $stmt->execute();
         
@@ -510,7 +508,9 @@ class Pdo implements
      * @param string $password
      * @param string|null $firstName
      * @param string|null $lastName
-     * @return bool TRUE if query is successful, FALSE otherwise
+     * @return int|bool 
+     *         LastInsertId if query is successful
+     *         FALSE otherwise
      */
     public function insertUser($username, $password, $email, $firstName = null, $lastName = null)
     {
@@ -530,23 +530,32 @@ class Pdo implements
         $insertValues       = array(':username', ':password', ':first_name', ':last_name', ':email', ':email_verified');
         $insertQuery        = sprintf('INSERT INTO %s ('. implode(",", $insertColumns).') VALUES ('. implode(",", $insertValues) .')', $this->config['user_table']);
         $isEmailVerified    = 0;
-
+        $password           = $this->hashPassword($password);
+        
         $stmt = $this->db->prepare($insertQuery);
         
         $stmt->bindParam(':username',       $username);
-        $stmt->bindParam(':password',       $this->hashPassword($password));
+        $stmt->bindParam(':password',       $password);
         $stmt->bindParam(':first_name',     $firstName);
         $stmt->bindParam(':last_name',      $lastName);
         $stmt->bindParam(':email',          $email);
         $stmt->bindParam(':email_verified', $isEmailVerified);
         
-        return $stmt->execute();
+        if($stmt->execute())
+        {
+            return $this->db->lastInsertId();
+        }
+        else 
+        {
+            return false;
+        }
     }
     
     /**
      * Updates a user record in user table
      * 
-     * @param string $username
+     * @param int $id
+     * @param string|null $username
      * @param string|null $password
      * @param string|null $email 
      * @param string|null $firstName
@@ -555,13 +564,16 @@ class Pdo implements
      * @throws \InvalidArgumentException when username is not set
      * @return type
      */
-    public function updateUser($username, $password = null, $email = null, $firstName = null, $lastName = null)
+    public function updateUser($id, $username = null, $password = null, $email = null, $firstName = null, $lastName = null)
     {
-        if(!isset($username)){
-            throw new InvalidArgumentException("Username is not set");
+        if(!isset($id)){
+            throw new InvalidArgumentException("ID is not set"); 
         }
         
         $updateValues = array();
+        
+        if(isset($username))
+            array_push($updateValues, 'username=:username');
         
         if(isset($password))
             array_push($updateValues, 'password=:password');
@@ -577,19 +589,23 @@ class Pdo implements
         if(isset($lastName))
             array_push($updateValues, 'last_name=:last_name');
         
-        if(!isset($password) && !isset($email) && !isset($firstName) && !isset($lastName)){
+        if(!isset($username) && !isset($password) && !isset($email) && !isset($firstName) && !isset($lastName)){
             throw new InvalidArgumentException("Any parameter is set");
         }
             
+        $password = $this->hashPassword($password);
+        $isEmailVerified = 0;
+        
         $stmt = $this->db->prepare(sprintf('UPDATE %s SET '. implode(",",$updateValues) .' WHERE username=:username', $this->config['user_table']));
         
-        isset($password)    ? $stmt->bindParam(':password', $this->hashPassword($password)) : "";
-        isset($firstName)   ? $stmt->bindParam(':first_name', $firstName)                   : "";
-        isset($lastName)    ? $stmt->bindParam(':last_name', $lastName)                     : "";
-        isset($email)       ? $stmt->bindParam(':email', $email)                            : "";
-        isset($email)       ? $stmt->bindParam(':email_verified', 0)                        : "";
+        isset($username)    ? $stmt->bindParam(':username', $username)              : "";
+        isset($password)    ? $stmt->bindParam(':password', $password)              : "";
+        isset($firstName)   ? $stmt->bindParam(':first_name', $firstName)           : "";
+        isset($lastName)    ? $stmt->bindParam(':last_name', $lastName)             : "";
+        isset($email)       ? $stmt->bindParam(':email', $email)                    : "";
+        isset($email)       ? $stmt->bindParam(':email_verified', $isEmailVerified) : "";
         
-        $stmt->bindParam(':username', $username);
+        $stmt->bindParam(':id', $id);
         
         return $stmt->execute();
     }
@@ -597,18 +613,18 @@ class Pdo implements
     /**
      * Deletes a user record on table
      *  
-     * @param string $username
+     * @param int $id User id in table
      * @throws \InvalidArgumentException when username is not set
      */
-    public function deleteUser($username)
+    public function deleteUser($id)
     {
-        if(!isset($username)){
-            throw new InvalidArgumentException("Username is not set");
+        if(!isset($id)){
+            throw new InvalidArgumentException("ID is not set");
         }
         
-        $stmt = $this->db->prepare(sprintf('DELETE FROM %s WHERE username=:username', $this->config['user_table']));
+        $stmt = $this->db->prepare(sprintf('DELETE FROM %s WHERE id=:id', $this->config['user_table']));
         
-        $stmt->bindParam(':username', $username);
+        $stmt->bindParam(':id', $id);
         
         return $stmt->execute();
     }
@@ -819,6 +835,7 @@ class Pdo implements
             );
 
             CREATE TABLE {$this->config['user_table']} (
+              id                  INT(11) NOT NULL AUTO_INCREMENT,
               username            VARCHAR(80),
               password            VARCHAR(80),
               first_name          VARCHAR(80),
@@ -826,6 +843,7 @@ class Pdo implements
               email               VARCHAR(80),
               email_verified      BOOLEAN,
               scope               VARCHAR(4000)
+              PRIMARY KEY (id)
             );
 
             CREATE TABLE {$this->config['scope_table']} (
