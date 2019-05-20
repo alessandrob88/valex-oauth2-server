@@ -446,11 +446,28 @@ class Pdo implements
     }
 
     /**
+     * @param string $id
+     * @return array if the user is found
+     *         bool false otherwise
+     */
+    public function getUserById($id)
+    {
+        $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s WHERE id=:id', $this->config['user_table']));
+        $stmt->execute(array('id' => $id));
+
+        if (!$userInfo = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return false;
+        }
+
+        return $userInfo;
+    }
+    
+    /**
      * @param string $username
      * @return array if the user is found
      *         bool false otherwise
      */
-    public function getUser($username)
+    public function getUserByUsername($username)
     {
         $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s WHERE username=:username', $this->config['user_table']));
         $stmt->execute(array('username' => $username));
