@@ -467,7 +467,7 @@ class Pdo implements
      * @return array if the user is found
      *         bool false otherwise
      */
-    public function getUserByUsername($username)
+    public function getUser($username)
     {
         $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s WHERE username=:username', $this->config['user_table']));
         $stmt->execute(array('username' => $username));
