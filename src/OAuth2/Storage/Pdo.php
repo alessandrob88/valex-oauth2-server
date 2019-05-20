@@ -613,7 +613,7 @@ class Pdo implements
         $password = $this->hashPassword($password);
         $isEmailVerified = 0;
         
-        $stmt = $this->db->prepare(sprintf('UPDATE %s SET '. implode(",",$updateValues) .' WHERE username=:username', $this->config['user_table']));
+        $stmt = $this->db->prepare(sprintf('UPDATE %s SET '. implode(",",$updateValues) .' WHERE id=:id', $this->config['user_table']));
         
         isset($username)    ? $stmt->bindParam(':username', $username)              : "";
         isset($password)    ? $stmt->bindParam(':password', $password)              : "";
