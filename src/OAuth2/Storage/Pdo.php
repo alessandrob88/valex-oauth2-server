@@ -310,8 +310,8 @@ class Pdo implements
      * @return bool
      */
     public function checkUserCredentials($username, $password)
-    {
-        if ($user = $this->getUser($username)) {
+    {        
+        if ($user = $this->getPasswordByUsername($username)) {
             return $this->checkPassword($user, $password);
         }
 
@@ -459,7 +459,10 @@ class Pdo implements
             return false;
         }
 
-        return $userInfo;
+        // the default behavior is to use "username" as the user_id
+        return array_merge(array(
+            'user_id' => $username
+        ), $userInfo);
     }
     
     /**
@@ -476,6 +479,22 @@ class Pdo implements
             return false;
         }
 
+        // the default behavior is to use "username" as the user_id
+        return array_merge(array(
+            'user_id' => $username
+        ), $userInfo);
+    }
+    
+    private function getPasswordByUsername($username)
+    {
+        $stmt = $this->db->prepare($sql = sprintf('SELECT password FROM %s WHERE username=:username', $this->config['user_table']));
+        $stmt->execute(array('username' => $username));
+
+        if (!$userInfo = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+            return false;
+        }
+
+        // the default behavior is to use "username" as the user_id
         return $userInfo;
     }
 
