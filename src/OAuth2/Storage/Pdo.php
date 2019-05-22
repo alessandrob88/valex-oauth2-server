@@ -461,7 +461,7 @@ class Pdo implements
 
         // the default behavior is to use "username" as the user_id
         return array_merge(array(
-            'user_id' => $username
+            'user_id' => $userInfo["username"]
         ), $userInfo);
     }
     
@@ -481,7 +481,7 @@ class Pdo implements
 
         // the default behavior is to use "username" as the user_id
         return array_merge(array(
-            'user_id' => $username
+            'user_id' => $userInfo["username"]
         ), $userInfo);
     }
     
