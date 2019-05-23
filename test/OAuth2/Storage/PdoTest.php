@@ -38,4 +38,5 @@ class PdoTest extends BaseTest
         $config = array('username' => 'brent', 'password' => 'brentisaballer');
         $storage = new Pdo($config);
     }
+
 }

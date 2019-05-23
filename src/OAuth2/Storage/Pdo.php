@@ -647,6 +647,29 @@ class Pdo implements
     }
     
     /**
+     * Verify a user email
+     *
+     * @param integer $id
+     * @return void
+     */
+    public function verifyUserEmail($id) {
+
+        if(!isset($id)){
+            throw new InvalidArgumentException("ID is not set"); 
+        }
+
+        $isEmailVerified = 1;
+
+        $stmt = $this->db->prepare(sprintf('UPDATE %S SET email_verified = :is_email_verified WHERE id=:id', $this->config['user_table']));
+
+        $stmt->bindParam(':is_email_verified', $isEmailVerified);
+        $stmt->bindParam(':id', $id);
+
+        return $stmt->execute;
+
+    }
+    
+    /**
      * Deletes a user record on table
      *  
      * @param int $id User id in table
