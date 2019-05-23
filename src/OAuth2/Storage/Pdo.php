@@ -97,7 +97,35 @@ class Pdo implements
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         // make this extensible
-        return $result && $result['client_secret'] == $client_secret;
+        //return $result && $result['client_secret'] == $client_secret;
+
+        return $this->checkClientSecret($client_secret, $result);
+
+    }
+
+    /**
+     * Create the password's hash to store into the database
+     *
+     * @param string $secret
+     * @return string
+     */
+    public function createClientSecret(string $secret) : string{
+
+        return \password_hash($secret,PASSWORD_BCRYPT, array("cost" => 12));
+
+    }
+
+    /**
+     * Check for valid password againt the hashed one
+     *
+     * @param string $password
+     * @param object $client
+     * @return boolean
+     */
+    public function checkClientSecret($password, $client) : bool {
+
+        return \password_verify($password, $client['client_secret']);
+
     }
 
     /**
@@ -145,6 +173,8 @@ class Pdo implements
         } else {
             $stmt = $this->db->prepare(sprintf('INSERT INTO %s (client_id, client_secret, redirect_uri, grant_types, scope, user_id) VALUES (:client_id, :client_secret, :redirect_uri, :grant_types, :scope, :user_id)', $this->config['client_table']));
         }
+
+        $client_secret = $this->createClientSecret($client_secret);
 
         return $stmt->execute(compact('client_id', 'client_secret', 'redirect_uri', 'grant_types', 'scope', 'user_id'));
     }
