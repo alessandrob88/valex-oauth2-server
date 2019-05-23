@@ -660,12 +660,12 @@ class Pdo implements
 
         $isEmailVerified = 1;
 
-        $stmt = $this->db->prepare(sprintf('UPDATE %S SET email_verified = :is_email_verified WHERE id=:id', $this->config['user_table']));
+        $stmt = $this->db->prepare(sprintf('UPDATE %s SET email_verified=:is_email_verified WHERE id=:id', $this->config['user_table']));
 
         $stmt->bindParam(':is_email_verified', $isEmailVerified);
         $stmt->bindParam(':id', $id);
 
-        return $stmt->execute;
+        return $stmt->execute();
 
     }
     
