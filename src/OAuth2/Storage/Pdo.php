@@ -642,7 +642,10 @@ class Pdo implements
             array_push($updateValues, 'username=:username');
         
         if(isset($password))
+        {
             array_push($updateValues, 'password=:password');
+            $password = $this->hashPassword($password);
+        }
         
         if(isset($email)){
             array_push($updateValues, 'email=:email');
@@ -659,7 +662,6 @@ class Pdo implements
             throw new InvalidArgumentException("Any parameter is set");
         }
             
-        $password = $this->hashPassword($password);
         $isEmailVerified = 0;
         
         $stmt = $this->db->prepare(sprintf('UPDATE %s SET '. implode(",",$updateValues) .' WHERE id=:id', $this->config['user_table']));
