@@ -704,7 +704,7 @@ class Pdo implements
     public function changeUserPassword(string $username, string $password)
     {
 
-        $pasword = $this->hashPassword(
+        $hashed_password = $this->hashPassword(
             $password
         );
 
@@ -717,7 +717,7 @@ class Pdo implements
             $sql_query
         );
 
-        $stmt->bindParam(':password',$password);
+        $stmt->bindParam(':password',$hashed_password);
         $stmt->bindParam(':username',$username);
 
         return $stmt->execute();
