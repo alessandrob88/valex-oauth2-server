@@ -699,7 +699,7 @@ class Pdo implements
 
     }
 
-    public function changeUserPassword(int $id, string $password)
+    public function changeUserPassword(string $username, string $password)
     {
 
         $pasword = $this->hashPassword(
@@ -707,7 +707,7 @@ class Pdo implements
         );
 
         $sql_query = sprintf(
-            "UPDATE %s SET password=:password WHERE id=:id",
+            "UPDATE %s SET password=:password WHERE username=:username",
             $this->config['user_table']
         );
 
@@ -716,7 +716,7 @@ class Pdo implements
         );
 
         $stmt->bindParam(':password',$password);
-        $stmt->bindParam(':id',$id);
+        $stmt->bindParam(':username',$username);
 
         return $stmt->execute();
 
