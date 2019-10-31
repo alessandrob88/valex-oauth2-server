@@ -698,6 +698,31 @@ class Pdo implements
         return $stmt->execute();
 
     }
+
+    public function changeUserPassword(int $id, string $password)
+    {
+
+        $pasword = $this->hashPassword(
+            $password
+        );
+
+        $sql_query = sprintf(
+            "UPDATE %s SET password=:password WHERE id=:id",
+            $this->config['user_table']
+        );
+
+        $stmt = $this->db->prepare(
+            $sql_query
+        );
+
+        $stmt->bindParam(':password',$password);
+        $stmt->bindParam(':id',$id);
+
+        return $stmt->execute();
+
+    }
+
+
     
     /**
      * Deletes a user record on table
