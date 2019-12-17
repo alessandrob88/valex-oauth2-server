@@ -482,7 +482,7 @@ class Pdo implements
      */
     public function getUserById($id)
     {
-        $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s WHERE id=:id', $this->config['user_table']));
+        $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope, type FROM %s WHERE id=:id', $this->config['user_table']));
         $stmt->execute(array('id' => $id));
 
         if (!$userInfo = $stmt->fetch(\PDO::FETCH_ASSOC)) {
@@ -502,7 +502,7 @@ class Pdo implements
      */
     public function getUser($username)
     {
-        $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s WHERE username=:username', $this->config['user_table']));
+        $stmt = $this->db->prepare($sql = sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope, type FROM %s WHERE username=:username', $this->config['user_table']));
         $stmt->execute(array('username' => $username));
 
         if (!$userInfo = $stmt->fetch(\PDO::FETCH_ASSOC)) {
@@ -558,7 +558,7 @@ class Pdo implements
      */
     public function getUserList()
     {
-        $stmt = $this->db->prepare(sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope FROM %s ', $this->config['user_table']));
+        $stmt = $this->db->prepare(sprintf('SELECT id, username, first_name, last_name, email, email_verified, scope, type FROM %s ', $this->config['user_table']));
         
         $stmt->execute();
         
@@ -578,7 +578,7 @@ class Pdo implements
      *         LastInsertId if query is successful
      *         FALSE otherwise
      */
-    public function insertUser($username, $password, $email, $firstName = null, $lastName = null)
+    public function insertUser($username, $password, $email, $firstName = null, $lastName = null, $type = null)
     {
         if(!isset($username)){
             throw new InvalidArgumentException("Username is not set");
@@ -592,20 +592,21 @@ class Pdo implements
             throw new InvalidArgumentException("Email is not set");
         }
         
-        $insertColumns      = array('username', 'password', 'first_name', 'last_name', 'email', 'email_verified');
-        $insertValues       = array(':username', ':password', ':first_name', ':last_name', ':email', ':email_verified');
+        $insertColumns      = array('username', 'password', 'first_name', 'last_name', 'email', 'email_verified', 'type');
+        $insertValues       = array(':username', ':password', ':first_name', ':last_name', ':email', ':email_verified', ':type');
         $insertQuery        = sprintf('INSERT INTO %s ('. implode(",", $insertColumns).') VALUES ('. implode(",", $insertValues) .')', $this->config['user_table']);
         $isEmailVerified    = 0;
-        $password           = $this->hashPassword($password);
+        $hashedPassword     = $this->hashPassword($password);
         
         $stmt = $this->db->prepare($insertQuery);
         
         $stmt->bindParam(':username',       $username);
-        $stmt->bindParam(':password',       $password);
+        $stmt->bindParam(':password',       $hashedPassword);
         $stmt->bindParam(':first_name',     $firstName);
         $stmt->bindParam(':last_name',      $lastName);
         $stmt->bindParam(':email',          $email);
         $stmt->bindParam(':email_verified', $isEmailVerified);
+        $stmt->bindParam(':type',           $type);
         
         if($stmt->execute())
         {
@@ -626,11 +627,12 @@ class Pdo implements
      * @param string|null $email 
      * @param string|null $firstName
      * @param string|null $lastName
+     * @param string|null $type
      *
      * @throws \InvalidArgumentException when username is not set
      * @return type
      */
-    public function updateUser($id, $username = null, $password = null, $email = null, $firstName = null, $lastName = null)
+    public function updateUser($id, $username = null, $password = null, $email = null, $firstName = null, $lastName = null, $type = null)
     {
         if(!isset($id)){
             throw new InvalidArgumentException("ID is not set"); 
@@ -658,7 +660,10 @@ class Pdo implements
         if(isset($lastName))
             array_push($updateValues, 'last_name=:last_name');
         
-        if(!isset($username) && !isset($password) && !isset($email) && !isset($firstName) && !isset($lastName)){
+        if(isset($type))
+            array_push($updateValues, 'type=:type');
+        
+        if(!isset($username) && !isset($password) && !isset($email) && !isset($firstName) && !isset($lastName) && !isset($type)){
             throw new InvalidArgumentException("Any parameter is set");
         }
             
@@ -672,6 +677,7 @@ class Pdo implements
         isset($lastName)    ? $stmt->bindParam(':last_name', $lastName)             : "";
         isset($email)       ? $stmt->bindParam(':email', $email)                    : "";
         isset($email)       ? $stmt->bindParam(':email_verified', $isEmailVerified) : "";
+        isset($type)        ? $stmt->bindParam(':type', $type)                      : "";
         
         $stmt->bindParam(':id', $id);
         
@@ -958,7 +964,8 @@ class Pdo implements
               last_name           VARCHAR(80),
               email               VARCHAR(80),
               email_verified      BOOLEAN,
-              scope               VARCHAR(4000)
+              scope               VARCHAR(4000),
+              type                ENUM('default','rt')
               PRIMARY KEY (id)
             );
 
